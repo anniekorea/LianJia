@@ -12,6 +12,7 @@ import datetime
 from lxml import etree
 import pandas as pd
 import numpy as np
+import os
 
 #设置列表页URL的固定部分
 #url='http://sh.lianjia.com/ershoufang/'
@@ -65,17 +66,23 @@ def get_html(url,totalPage):
             html2=r.content
             html = html + html2
         #每次间隔x秒
-        time_interval = random.uniform(1,5) 
+        time_interval = random.uniform(1,3) 
         time.sleep(time_interval)  
     return html
 
-def save_html(html,quyu=''):
+def save_html(html,datestr,quyu=''):
     #保存html
     if isinstance(html,str):
         html_str=html
     else:
         html_str=html.decode("utf-8")
-    filename='./save_html_data/'+datetime.datetime.now().strftime('%Y%m%d')+'/html_'+quyu+'.txt' #+datetime.datetime.now().strftime('%Y%m%d%H%M')
+    path='C:/Me/LianJia/save_html_data/'+datestr
+    folder = os.path.exists(path)
+    if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
+        os.makedirs(path)
+
+    filename=path+'/html_'+quyu+'.txt' #+datetime.datetime.now().strftime('%Y%m%d%H%M')
+    
     fh = open(filename, 'w', encoding='utf-8')
     fh.write(html_str)
     fh.close()
@@ -130,8 +137,8 @@ def parse_html(html):
     
     #import pandas as pd
     #创建数据表
-    house=pd.DataFrame({'totalprice':tp,'houseinfo':hi,'followinfo':fi,'positioninfo':pi,
-                        'housename':housename},index=np.array(housecode))
+    house=pd.DataFrame({'id':housecode,'totalprice':tp,'houseinfo':hi,'followinfo':fi,'positioninfo':pi,
+                        'housename':housename}) #,index=np.array(housecode)
     #查看数据表的内容
     #house.head()
     #house.to_csv("house_notsplit.csv")
@@ -155,26 +162,24 @@ def split_data(house):
     
     try:    
         houseinfo_split = pd.DataFrame((x.split('|') for x in houseinfo_replace),
-                                   index=house.index,
                                    columns=['xiaoqu','huxing','mianji',
-                                            'chaoxiang','zhuangxiu','dianti'])
+                                            'chaoxiang','zhuangxiu','dianti']) #index=house.index,
     #houseinfo_split.head()
     except:
         houseinfo_split = pd.DataFrame((x.split('|') for x in houseinfo_replace),
-                                   index=house.index,
                                    columns=['xiaoqu','huxing','mianji',
-                                            'chaoxiang','zhuangxiu'])
+                                            'chaoxiang','zhuangxiu']) #index=house.index,
         houseinfo_split['dianti']=None
     finally:    
         #2、对房源关注度进行分列
         followinfo_split = pd.DataFrame((x.split('/') for x in house.followinfo),
-                                        index=house.index,columns=['guanzhu','daikan','fabu'])
+                                        columns=['guanzhu','daikan','fabu'])  #,index=house.index
         
     
         
         #3、对房源位置信息进行分列
         positioninfo_split=pd.DataFrame((x.split('-') for x in house.positioninfo),
-                                        index=house.index,columns=['louceng','quyu'])
+                                        columns=['louceng','quyu']) #index=house.index,
         positioninfo_split['louceng']=positioninfo_split['louceng'].map(str.strip)
         positioninfo_split['quyu']=positioninfo_split['quyu'].map(str.strip)
         
@@ -199,6 +204,7 @@ df=pd.read_csv('链家二手房小区域列表.csv',engine='python')
 QuyuLianjie=df['ershoufanglianjie']
 Quyu=df['xiaoquyu']
 Quyu.head()
+datestr=datetime.datetime.now().strftime('%Y%m%d')
 
 #爬数据，并保存在子文件夹save_html_data中，每个日期一个文件夹，同一天的数据放在以日期命名的子文件夹中
 for i in range(0,len(QuyuLianjie)):
@@ -210,14 +216,14 @@ for i in range(0,len(QuyuLianjie)):
         html=''
     else:
         html=get_html(url,totalPage)
-    save_html(html,quyu=quyu)
+    save_html(html,datestr,quyu=quyu)
 
 
 #解析数据，并保存在子文件夹save_house_data中
 for i in range(0,len(QuyuLianjie)):
-    print(str(i)+'/'+str(len(QuyuLianjie)))
+    print(str(i+1)+'/'+str(len(QuyuLianjie)))
     quyu=Quyu[i]
-    filename='./save_html_data/'+datetime.datetime.now().strftime('%Y%m%d')+'/html_'+quyu+'.txt'
+    filename='C:/Me/LianJia/save_html_data/'+datestr+'/html_'+quyu+'.txt'
     fh = open(filename, 'r', encoding='utf-8')
     html=fh.read()
     fh.close()
@@ -229,7 +235,7 @@ for i in range(0,len(QuyuLianjie)):
         if i>=1:
             all_house_split=pd.concat([all_house_split,house_split])
 
-all_house_split1 = all_house_split[~all_house_split.index.duplicated()]
-filename='./save_house_data/house_'+datetime.datetime.now().strftime('%Y%m%d')+'.csv'
-all_house_split1.to_csv(filename)  
+all_house_split1 = all_house_split[~all_house_split['id'].duplicated()]
+filename='C:/Me/LianJia/save_house_data/house_'+datestr+'.csv'
+all_house_split1.to_csv(filename)
 
