@@ -76,7 +76,7 @@ def save_html(html,datestr,quyu=''):
         html_str=html
     else:
         html_str=html.decode("utf-8")
-    path='C:/Me/LianJia/save_html_data/'+datestr
+    path='../LianJiaSaveData/save_html_data/'+datestr
     folder = os.path.exists(path)
     if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
         os.makedirs(path)
@@ -223,7 +223,7 @@ for i in range(0,len(QuyuLianjie)):
 for i in range(0,len(QuyuLianjie)):
     print(str(i+1)+'/'+str(len(QuyuLianjie)))
     quyu=Quyu[i]
-    filename='C:/Me/LianJia/save_html_data/'+datestr+'/html_'+quyu+'.txt'
+    filename='../LianJiaSaveData/save_html_data/'+datestr+'/html_'+quyu+'.txt'
     fh = open(filename, 'r', encoding='utf-8')
     html=fh.read()
     fh.close()
@@ -236,6 +236,6 @@ for i in range(0,len(QuyuLianjie)):
             all_house_split=pd.concat([all_house_split,house_split])
 
 all_house_split1 = all_house_split[~all_house_split['id'].duplicated()]
-filename='C:/Me/LianJia/save_house_data/house_'+datestr+'.csv'
+filename='../LianJiaSaveData/save_house_data/house_'+datestr+'.csv'
 all_house_split1.to_csv(filename)
 

@@ -8,7 +8,7 @@ Created on Wed Jul 11 20:16:43 2018
 import pandas as pd
 #import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
+#import matplotlib
 import csv
 
 def save_analyze_result(fh,result_txt,result):
@@ -25,20 +25,23 @@ def save_analyze_result(fh,result_txt,result):
     #fh.close()
     
     
-datafilename='house_20180809'
+datestr=input('请输入需要分析的日期：')
+datafilename='house_'+datestr
+
 filename='./AnalyzeResult/AnalyzeData.txt'
 fh = open(filename, 'a', encoding='utf-8',newline='')
 
+house=pd.read_csv('../LianJiaSaveData/save_house_data/'+datafilename+'.csv',sep=',',index_col=0)
 
-house=pd.read_csv('C:/Me/LianJia/save_house_data/'+datafilename+'.csv',sep=',',index_col=0)
 #本文变量数量化
 house['mianji']=house['mianji'].str[1:-3].astype(float)
 house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
 #增加“每平米房价”字段
 house['price']=house['totalprice']/house['mianji']
 
-
-
+#汇总信息
+fh.write('#####################分析日期：%s，共%d套房源#####################\r\n'%(datestr,len(house)))
+         
 #房价最高的10套二手房
 result_txt='房价最高的10套二手房:\r\n'
 result=house.sort_values('totalprice',ascending=False).head(10)
@@ -54,10 +57,20 @@ result_txt='二手房源最多的10个小区:\r\n'
 result=house['xiaoqu'].value_counts().head(10)
 save_analyze_result(fh,result_txt,result)
 
-#出现最多的5种户型
-result_txt='出现最多的5种户型:\r\n'
-result=house['huxing'].value_counts().head(5)
+#出现最多的10种户型
+result_txt='出现最多的10种户型:\r\n'
+result=house['huxing'].value_counts().head(10)
 save_analyze_result(fh,result_txt,result)
+
+#画柱状图
+fig=plt.figure()
+plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
+plt.bar(result.index,result)
+plt.title("户型分布（出现最多的10种）")
+plt.ylabel('')
+plt.xlabel('area')
+fig.savefig('./AnalyzeResult/%s户型分布.jpg'%datestr)
+
 
 #面积最小的二手房
 result_txt='面积最小的二手房:\r\n'
@@ -85,13 +98,13 @@ fh.write('上海市二手房平均价格为：%.2f万元每平米'%house['price'
 
 #按照面积分组
 #%matplotlib inline
-house_filter=house[house['mianji']<=350] #大部分面积在350平米以下，小部分太大的面积会影响作图的分布效果
+#house_filter=house[house['mianji']<=350] #大部分面积在350平米以下，小部分太大的面积会影响作图的分布效果
 fig=plt.figure()
-house_filter.mianji.hist(bins=35)
+house.mianji.hist(range=(0,350),bins=35,rwidth=0.8) 
 plt.title("Distribution of area of house")
 plt.ylabel('count of house')
 plt.xlabel('area')
-fig.savefig('./AnalyzeResult/面积分布.jpg')
+fig.savefig('./AnalyzeResult/%s面积分布.jpg'%datestr)
 #labels = ['1-50', '51-100', '101-150', '151-200', '201-250', '251-300','301-350']
 # 面积分组的labels
 bins = range(0, 351, 10) # [0, 50, 100, 150, 200, 250, 300, 350]
@@ -157,7 +170,7 @@ save_analyze_result(fh,result_txt,result)
 
 #labels = ['1-50', '51-100', '101-150', '151-200', '201-250', '251-300','301-350']
 # 总价分组的labels
-bins = range(100, 1500, 50)
+bins = [0]+list(range(100, 2050, 50))+[100000]
 # [0, 50, 100, 150, 200, 250, 300, 350]
 # 告诉我们bin是哪些
 house['totalprice_group'] = pd.cut(house.totalprice, bins, right=False)
@@ -169,14 +182,13 @@ result=totalprice_guanzhu
 save_analyze_result(fh,result_txt,result)
 
 #作图
-house_filter=house[house['totalprice']<1000]
 fig=plt.figure()
-house_filter.totalprice.hist(bins=len(totalprice_guanzhu))
-plt.title("Distribution of total price of house(total price<1000)")
+house.totalprice.hist(range=(0,1000),bins=len(totalprice_guanzhu),rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
+plt.title("Distribution of total price of house")
 plt.ylabel('count of house')
 plt.xlabel('totalprice')
 #fig = ax2.get_figure()
-fig.savefig('./AnalyzeResult/总价格分布.jpg')
+fig.savefig('./AnalyzeResult/%s总价格分布.jpg'%datestr)
 
 
 fh.close()
