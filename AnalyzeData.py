@@ -24,6 +24,7 @@ def save_analyze_result(fh,result_txt,result):
     fh.write('\r\n')
     #fh.close()
     
+plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
     
 datestr=input('请输入需要分析的日期：')
 datafilename='house_'+datestr
@@ -64,11 +65,10 @@ save_analyze_result(fh,result_txt,result)
 
 #画柱状图
 fig=plt.figure()
-plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
 plt.bar(result.index,result)
 plt.title("户型分布（出现最多的10种）")
-plt.ylabel('')
-plt.xlabel('area')
+plt.ylabel('房源数')
+plt.xlabel('户型')
 fig.savefig('./AnalyzeResult/%s户型分布.jpg'%datestr)
 
 
@@ -101,9 +101,9 @@ fh.write('上海市二手房平均价格为：%.2f万元每平米'%house['price'
 #house_filter=house[house['mianji']<=350] #大部分面积在350平米以下，小部分太大的面积会影响作图的分布效果
 fig=plt.figure()
 house.mianji.hist(range=(0,350),bins=35,rwidth=0.8) 
-plt.title("Distribution of area of house")
-plt.ylabel('count of house')
-plt.xlabel('area')
+plt.title("二手房面积分布")
+plt.ylabel('房源数')
+plt.xlabel('面积（平方米）')
 fig.savefig('./AnalyzeResult/%s面积分布.jpg'%datestr)
 #labels = ['1-50', '51-100', '101-150', '151-200', '201-250', '251-300','301-350']
 # 面积分组的labels
@@ -167,12 +167,7 @@ save_analyze_result(fh,result_txt,result)
 #首先将房价分组
 #print(house['totalprice'].min())
 #print(house['totalprice'].max())
-
-#labels = ['1-50', '51-100', '101-150', '151-200', '201-250', '251-300','301-350']
-# 总价分组的labels
 bins = [0]+list(range(100, 2050, 50))+[100000]
-# [0, 50, 100, 150, 200, 250, 300, 350]
-# 告诉我们bin是哪些
 house['totalprice_group'] = pd.cut(house.totalprice, bins, right=False)
 # 按照bin把数据cut下来，并附上labels，做成一个新的column，保存下来。
 totalprice_guanzhu=house.groupby('totalprice_group').sum()['guanzhu'].sort_values(ascending=False)
@@ -184,14 +179,14 @@ save_analyze_result(fh,result_txt,result)
 #作图
 fig=plt.figure()
 house.totalprice.hist(range=(0,1000),bins=len(totalprice_guanzhu),rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
-plt.title("Distribution of total price of house")
-plt.ylabel('count of house')
-plt.xlabel('totalprice')
+plt.title("二手房总价分布")
+plt.ylabel('房源数')
+plt.xlabel('总价（万）')
 #fig = ax2.get_figure()
 fig.savefig('./AnalyzeResult/%s总价格分布.jpg'%datestr)
 
 
 fh.close()
 
-
-
+filename='./AnalyzeResult/house_'+datestr+'(utf_8_sig).csv'
+house.to_csv(filename,encoding = "utf_8_sig")
