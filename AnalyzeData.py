@@ -178,7 +178,7 @@ save_analyze_result(fh,result_txt,result)
 
 #作图
 fig=plt.figure()
-house.totalprice.hist(range=(0,1000),bins=len(totalprice_guanzhu),rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
+house.totalprice.hist(range=(0,1000),bins=40,rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
 plt.title("二手房总价分布")
 plt.ylabel('房源数')
 plt.xlabel('总价（万）')

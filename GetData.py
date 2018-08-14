@@ -193,7 +193,7 @@ def get_quyu_list(url='https://sh.lianjia.com/ershoufang/pudong/',quyudaxiao='xi
     quyu=pd.DataFrame({'text':text,'href':href})
     href_split=pd.DataFrame(x.split('/') for x in quyu.href)
     quyu['pinyin']=href_split[2]
-    quyu.href=pd.DataFrame(url+x for x in quyu.pinyin)
+    quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
     return quyu
 
 
@@ -211,7 +211,7 @@ def get_xiaoquyu_lianjie(url='https://sh.lianjia.com/ershoufang/'):
         print('未查询到“链家二手房小区域列表.csv”，爬取并保存...')
         daquyu=get_quyu_list(url,quyudaxiao='da')
         for i in range(0,len(daquyu)):
-            href=daquyu.href[i]+'/'
+            href=daquyu.href[i]
             xiaoquyu=get_quyu_list(url=href,quyudaxiao='xiao')
             if i==0:
                 df=xiaoquyu
@@ -230,7 +230,7 @@ def get_xiaoquyu_lianjie(url='https://sh.lianjia.com/ershoufang/'):
 #房源数据有几万个，必须分区域爬取，且按浦东这种大区域也会超出3000个数据，所以必须分小区域
 
 #设置列表页URL的固定部分
-url='http://sh.lianjia.com/ershoufang/'
+url='http://hz.lianjia.com/ershoufang/'
 #设置页面页的可变部分
 page=('pg')
 
