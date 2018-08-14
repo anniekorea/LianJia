@@ -11,24 +11,7 @@ import random
 import datetime
 from lxml import etree
 import pandas as pd
-import numpy as np
 import os
-
-#设置列表页URL的固定部分
-#url='http://sh.lianjia.com/ershoufang/'
-#设置页面页的可变部分
-page=('pg')
-
-#设置请求头部信息,我们最好在http请求中设置一个头部信息，否则很容易被封ip。
-headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-'Accept':'text/html;q=0.9,*/*;q=0.8',
-'Accept-Charset':'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-'Accept-Encoding':'gzip',
-'Connection':'close',
-'Referer':'http://www.baidu.com/link?url=_andhfsjjjKRgEWkj7i9cFmYYGsisrnm2A-TN3XZDQXxvGsM9k9ZZSnikW2Yds4s&amp;amp;wd=&amp;amp;eqid=c3435a7d00146bd600000003582bfd1f'
-}
-#encoding=requests.get(url,headers=headers).encoding
-
 
 #url='https://sh.lianjia.com/ershoufang/beicai/'
 def get_page_num(url):#此函数用于获取页码，用于构造分页的链接
@@ -194,16 +177,76 @@ def split_data(house):
   
         return house_split
 
+#爬取区域的链接：文字text，链接href，拼音pinyin
+def get_quyu_list(url='https://sh.lianjia.com/ershoufang/pudong/',quyudaxiao='xiao'):
+    if quyudaxiao=='xiao':
+        i=2
+    elif quyudaxiao=='da':
+        i=1
+    else:
+        print('Please input da or xiao.')
+    r=requests.get(url,headers=headers)
+    html=r.content
+    lj=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
+    text=lj.xpath('//div[@data-role="ershoufang"]/div[%d]/a/text()'%i)
+    href=lj.xpath('//div[@data-role="ershoufang"]/div[%d]/a/@href'%i)
+    quyu=pd.DataFrame({'text':text,'href':href})
+    href_split=pd.DataFrame(x.split('/') for x in quyu.href)
+    quyu['pinyin']=href_split[2]
+    quyu.href=pd.DataFrame(url+x for x in quyu.pinyin)
+    return quyu
+
+
+#获取小区域的链接
+def get_xiaoquyu_lianjie(url='https://sh.lianjia.com/ershoufang/'):
+    try:
+        #小区域数据来源一：直接从文件读取小区域的链接
+        df=pd.read_csv('链家二手房小区域列表.csv',engine='python')
+        QuyuLianjie=df['ershoufanglianjie']
+        Quyu=df['xiaoquyu']
+        print('查询到“链家二手房小区域列表.csv”，直接导入...')
+        #Quyu.head()
+    except:
+        ##小区域数据来源二：从网站上爬取
+        print('未查询到“链家二手房小区域列表.csv”，爬取并保存...')
+        daquyu=get_quyu_list(url,quyudaxiao='da')
+        for i in range(0,len(daquyu)):
+            href=daquyu.href[i]+'/'
+            xiaoquyu=get_quyu_list(url=href,quyudaxiao='xiao')
+            if i==0:
+                df=xiaoquyu
+            else:
+                df=pd.concat([df,xiaoquyu],ignore_index=True)
+        QuyuLianjie=df['href']
+        Quyu=df['pinyin']
+        df.rename(columns={'href':'ershoufanglianjie', 'pinyin':'xiaoquyu'}, inplace = True)
+        df.to_csv('链家二手房小区域列表.csv')
+    return(Quyu,QuyuLianjie)
 
 
 
 
 #链家只能显示100页的数据，每页30个，不分区域最多只能爬取3000个数据
 #房源数据有几万个，必须分区域爬取，且按浦东这种大区域也会超出3000个数据，所以必须分小区域
-df=pd.read_csv('链家二手房小区域列表.csv',engine='python')
-QuyuLianjie=df['ershoufanglianjie']
-Quyu=df['xiaoquyu']
-Quyu.head()
+
+#设置列表页URL的固定部分
+url='http://sh.lianjia.com/ershoufang/'
+#设置页面页的可变部分
+page=('pg')
+
+#设置请求头部信息,我们最好在http请求中设置一个头部信息，否则很容易被封ip。
+headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+'Accept':'text/html;q=0.9,*/*;q=0.8',
+'Accept-Charset':'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+'Accept-Encoding':'gzip',
+'Connection':'close',
+'Referer':'http://www.baidu.com/link?url=_andhfsjjjKRgEWkj7i9cFmYYGsisrnm2A-TN3XZDQXxvGsM9k9ZZSnikW2Yds4s&amp;amp;wd=&amp;amp;eqid=c3435a7d00146bd600000003582bfd1f'
+}
+#encoding=requests.get(url,headers=headers).encoding
+
+#获取小区域列表
+(Quyu,QuyuLianjie)=get_xiaoquyu_lianjie(url)
+
 datestr=datetime.datetime.now().strftime('%Y%m%d')
 
 #爬数据，并保存在子文件夹save_html_data中，每个日期一个文件夹，同一天的数据放在以日期命名的子文件夹中
