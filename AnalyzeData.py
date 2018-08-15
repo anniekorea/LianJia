@@ -23,13 +23,16 @@ def save_analyze_result(fh,result_txt,result):
     #    writer.writerow(result.iloc[i].values)
     fh.write('\r\n')
     #fh.close()
+
+#%matplotlib inline
     
 plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
-    
-datestr=input('请输入需要分析的日期：')
-datafilename='house_'+datestr
 
-filename='./AnalyzeResult/AnalyzeData.txt'
+city=input('请输入需要分析的城市（拼音简写）:')
+datestr=input('请输入需要分析的日期：')
+datafilename='house_%s_%s'%(city,datestr)
+
+filename='../LianJiaSaveData/save_analyze_result/AnalyzeResult_%s_%s.txt'%(city,datestr)
 fh = open(filename, 'a', encoding='utf-8',newline='')
 
 house=pd.read_csv('../LianJiaSaveData/save_house_data/'+datafilename+'.csv',sep=',',index_col=0)
@@ -41,7 +44,7 @@ house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
 house['price']=house['totalprice']/house['mianji']
 
 #汇总信息
-fh.write('#####################分析日期：%s，共%d套房源#####################\r\n'%(datestr,len(house)))
+fh.write('============================分析日期：%s，共%d套房源============================\r\n'%(datestr,len(house)))
          
 #房价最高的10套二手房
 result_txt='房价最高的10套二手房:\r\n'
@@ -63,13 +66,13 @@ result_txt='出现最多的10种户型:\r\n'
 result=house['huxing'].value_counts().head(10)
 save_analyze_result(fh,result_txt,result)
 
-#画柱状图
+#作图
 fig=plt.figure()
 plt.bar(result.index,result)
 plt.title("户型分布（出现最多的10种）")
 plt.ylabel('房源数')
 plt.xlabel('户型')
-fig.savefig('./AnalyzeResult/%s户型分布.jpg'%datestr)
+fig.savefig('../LianJiaSaveData/save_analyze_result/户型分布_%s_%s.jpg'%(city,datestr))
 
 
 #面积最小的二手房
@@ -97,20 +100,18 @@ fh.write('上海市二手房平均总价为：%.2f万元'%house['totalprice'].me
 fh.write('上海市二手房平均价格为：%.2f万元每平米'%house['price'].mean()+'\r\n')
 
 #按照面积分组
-#%matplotlib inline
-#house_filter=house[house['mianji']<=350] #大部分面积在350平米以下，小部分太大的面积会影响作图的分布效果
+#作图
 fig=plt.figure()
-house.mianji.hist(range=(0,350),bins=35,rwidth=0.8) 
+house.mianji.hist(range=(0,350),bins=35,rwidth=0.8) #大部分面积在350平米以下，小部分太大的面积会影响作图的分布效果
 plt.title("二手房面积分布")
 plt.ylabel('房源数')
 plt.xlabel('面积（平方米）')
-fig.savefig('./AnalyzeResult/%s面积分布.jpg'%datestr)
+fig.savefig('../LianJiaSaveData/save_analyze_result/面积分布_%s_%s.jpg'%(city,datestr))
 #labels = ['1-50', '51-100', '101-150', '151-200', '201-250', '251-300','301-350']
 # 面积分组的labels
 bins = range(0, 351, 10) # [0, 50, 100, 150, 200, 250, 300, 350]
-# 告诉我们bin是哪些
-house['mianji_group'] = pd.cut(house.mianji, bins, right=False)
 # 按照bin把数据cut下来，并附上labels，做成一个新的column，保存下来。
+house['mianji_group'] = pd.cut(house.mianji, bins, right=False)
 
 
 #最普遍的二手房面积
@@ -176,17 +177,25 @@ result_txt='对不同总价的关注度差异：\r\n'
 result=totalprice_guanzhu
 save_analyze_result(fh,result_txt,result)
 
+#总价分布
 #作图
 fig=plt.figure()
 house.totalprice.hist(range=(0,1000),bins=40,rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
 plt.title("二手房总价分布")
 plt.ylabel('房源数')
 plt.xlabel('总价（万）')
-#fig = ax2.get_figure()
-fig.savefig('./AnalyzeResult/%s总价格分布.jpg'%datestr)
+fig.savefig('../LianJiaSaveData/save_analyze_result/总价分布_%s_%s.jpg'%(city,datestr))
+
+#单价分布
+fig=plt.figure()
+house.price.hist(range=(0,20),bins=40,rwidth=0.8) #range指定数据范围，超出范围的数据被忽略
+plt.title("二手房单价分布")
+plt.ylabel('房源数')
+plt.xlabel('单价（万）')
+fig.savefig('../LianJiaSaveData/save_analyze_result/单价分布_%s_%s.jpg'%(city,datestr))
 
 
 fh.close()
 
-filename='./AnalyzeResult/house_'+datestr+'(utf_8_sig).csv'
+filename='../LianJiaSaveData/save_analyze_result/house_%s_%s(utf_8_sig).csv'%(city,datestr)
 house.to_csv(filename,encoding = "utf_8_sig")

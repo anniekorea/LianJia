@@ -8,18 +8,70 @@ Created on Wed Jul 11 19:55:21 2018
 import requests
 import time
 import random
-import datetime
 from lxml import etree
 import pandas as pd
 import os
+import datetime
 
-#url='https://sh.lianjia.com/ershoufang/beicai/'
-def get_page_num(url):#此函数用于获取页码，用于构造分页的链接
-    import json
-    r=requests.get(url,headers=headers)
+#爬取区域的链接：文字text，链接href，拼音pinyin
+def get_quyu_list(url,region_big_small,headers):
+    if region_big_small=='small':
+        i=2
+        url
+    elif region_big_small=='big':
+        i=1
+    else:
+        print("Please input 'big' or 'small'.")
+    r=requests.get(url,headers)
     html=r.content
-    lj=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
-    page=lj.xpath('//div[@class="contentBottom clear"] \
+    link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
+    text=link.xpath('//div[@data-role="ershoufang"]/div[%d]/a/text()'%i)
+    href=link.xpath('//div[@data-role="ershoufang"]/div[%d]/a/@href'%i)
+    quyu=pd.DataFrame({'text':text,'href':href})
+    href_split=pd.DataFrame(x.split('/') for x in quyu.href)
+    quyu['pinyin']=href_split[2]
+    quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
+    return quyu
+
+
+#获取小区域的链接
+def get_small_quyu_link(city,headers):
+    url='https://'+city+'.lianjia.com/ershoufang/'
+    try:
+        #小区域数据来源一：直接从文件读取小区域的链接
+        df=pd.read_csv('链家二手房小区域列表'+city+'.csv',engine='python')
+        quyu_link_list=df['ershoufanglianjie']
+        quyu_list=df['xiaoquyu']
+        print('查询到“链家二手房小区域列表.csv”，直接导入...')
+        #quyu_list.head()
+    except:
+        ##小区域数据来源二：从网站上爬取
+        print('未查询到“链家二手房小区域列表.csv”，爬取并保存...')
+        big_quyu_list=get_quyu_list(url,'big',headers)
+        for i in range(0,len(big_quyu_list)):
+            href=big_quyu_list.href[i]
+            try:
+                xiaoquyu=get_quyu_list(href,'small',headers)
+                if i==0:
+                    df=xiaoquyu
+                else:
+                    df=pd.concat([df,xiaoquyu],ignore_index=True)
+            except:
+                print(href+'有问题，已忽略！')
+                pass
+        quyu_link_list=df['href']
+        quyu_list=df['pinyin']
+        df.rename(columns={'href':'ershoufanglianjie', 'pinyin':'xiaoquyu'}, inplace = True)
+        df.to_csv('链家二手房小区域列表'+city+'.csv')
+    return(quyu_list,quyu_link_list)
+
+#获取页码，用于构造分页的链接
+def get_page_num(url,headers):
+    import json
+    r=requests.get(url,headers)
+    html=r.content
+    link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
+    page=link.xpath('//div[@class="contentBottom clear"] \
                     /div[@class="page-box fr"] \
                     /div[@class="page-box house-lst-page-box"] \
                     /@page-data')
@@ -29,23 +81,23 @@ def get_page_num(url):#此函数用于获取页码，用于构造分页的链接
     else:
         page=page[0]#获取页码所在字符串
         page_dic=json.loads(page)
-        return page_dic.get("totalPage")
-    
+        totalPage=page_dic.get("totalPage")
+        return totalPage
 
 #循环抓取列表页信息
-def get_html(url,totalPage):
+def get_html(url,totalPage,headers):
     #totalPage=get_page_num(url)
     for i in range(1,totalPage+1):
         print(i)
         if i == 1:
             i=str(i)
-            a=(url+page+i+'/')
-            r=requests.get(url=a,headers=headers)
+            a=(url+'pg'+i+'/')
+            r=requests.get(a,headers)
             html=r.content
         else:
             i=str(i)
-            a=(url+page+i+'/')
-            r=requests.get(url=a,headers=headers)
+            a=(url+'pg'+i+'/')
+            r=requests.get(a,headers)
             html2=r.content
             html = html + html2
         #每次间隔x秒
@@ -53,13 +105,13 @@ def get_html(url,totalPage):
         time.sleep(time_interval)  
     return html
 
-def save_html(html,datestr,quyu=''):
-    #保存html
+#保存html
+def save_html(html,datestr,city,quyu,save_folder_path='../LianJiaSaveData/save_html_data/'):    
     if isinstance(html,str):
         html_str=html
     else:
         html_str=html.decode("utf-8")
-    path='../LianJiaSaveData/save_html_data/'+datestr
+    path=save_folder_path+datestr+'_'+city
     folder = os.path.exists(path)
     if not folder:                   #判断是否存在文件夹如果不存在则创建为文件夹
         os.makedirs(path)
@@ -71,13 +123,13 @@ def save_html(html,datestr,quyu=''):
     fh.close()
 
 
-################提 取 需 要 的 信 息#######################
+#提取需要的信息
 def parse_html(html):
     #使用lxml库的xpath方法对页面进行解析
-    lj=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
+    link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
         
     #1、提取房源总价
-    price=lj.xpath('//div[@class="priceInfo"]')  
+    price=link.xpath('//div[@class="priceInfo"]')  
     tp=[]
     for a in price:
         totalPrice=a.xpath('.//span/text()')[0]
@@ -87,7 +139,7 @@ def parse_html(html):
     #    print(p)
         
     #2、提取房源信息
-    houseInfo=lj.xpath('//div[@class="houseInfo"]')   
+    houseInfo=link.xpath('//div[@class="houseInfo"]')   
     hi=[]
     for b in houseInfo:
         house=b.xpath('.//text()')[0]+b.xpath('.//text()')[1]
@@ -97,7 +149,7 @@ def parse_html(html):
     #    print(i)
         
     #3、提取房源关注度
-    followInfo=lj.xpath('//div[@class="followInfo"]')    
+    followInfo=link.xpath('//div[@class="followInfo"]')    
     fi=[]
     for c in followInfo:
         follow=c.xpath('./text()')[0]
@@ -107,16 +159,16 @@ def parse_html(html):
     #    print(i)    
     
     #4、提取房源位置信息
-    positionInfo=lj.xpath('//div[@class="positionInfo"]')
+    positionInfo=link.xpath('//div[@class="positionInfo"]')
     pi=[]
     for d in positionInfo:
         position=d.xpath('.//text()')[0]+d.xpath('.//text()')[1]
         pi.append(position)
         
     #5、提取房源ID和名称信息
-    #housecode=lj.xpath('//div[@class="info clear"]/div[@class="title"]/a/@data-housecode')
-    housecode=lj.xpath('//div[@class="priceInfo"]/div[@class="unitPrice"]/@data-hid')
-    housename=lj.xpath('//div[@class="info clear"]/div[@class="title"]/a/text()')
+    #housecode=link.xpath('//div[@class="info clear"]/div[@class="title"]/a/@data-housecode')
+    housecode=link.xpath('//div[@class="priceInfo"]/div[@class="unitPrice"]/@data-hid')
+    housename=link.xpath('//div[@class="info clear"]/div[@class="title"]/a/text()')
     
     #import pandas as pd
     #创建数据表
@@ -129,7 +181,7 @@ def parse_html(html):
     return house
 
 
-################信 息 分 列#######################
+#信息分列
 def split_data(house):
     #house=pd.DataFrame({'totalprice':tp,'houseinfo':hi,'followinfo':fi,'positioninfo':pi,
     #                    'housename':housename},index=housecode)
@@ -177,62 +229,15 @@ def split_data(house):
   
         return house_split
 
-#爬取区域的链接：文字text，链接href，拼音pinyin
-def get_quyu_list(url='https://sh.lianjia.com/ershoufang/pudong/',quyudaxiao='xiao'):
-    if quyudaxiao=='xiao':
-        i=2
-    elif quyudaxiao=='da':
-        i=1
-    else:
-        print('Please input da or xiao.')
-    r=requests.get(url,headers=headers)
-    html=r.content
-    lj=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
-    text=lj.xpath('//div[@data-role="ershoufang"]/div[%d]/a/text()'%i)
-    href=lj.xpath('//div[@data-role="ershoufang"]/div[%d]/a/@href'%i)
-    quyu=pd.DataFrame({'text':text,'href':href})
-    href_split=pd.DataFrame(x.split('/') for x in quyu.href)
-    quyu['pinyin']=href_split[2]
-    quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
-    return quyu
-
-
-#获取小区域的链接
-def get_xiaoquyu_lianjie(url='https://sh.lianjia.com/ershoufang/'):
-    try:
-        #小区域数据来源一：直接从文件读取小区域的链接
-        df=pd.read_csv('链家二手房小区域列表.csv',engine='python')
-        QuyuLianjie=df['ershoufanglianjie']
-        Quyu=df['xiaoquyu']
-        print('查询到“链家二手房小区域列表.csv”，直接导入...')
-        #Quyu.head()
-    except:
-        ##小区域数据来源二：从网站上爬取
-        print('未查询到“链家二手房小区域列表.csv”，爬取并保存...')
-        daquyu=get_quyu_list(url,quyudaxiao='da')
-        for i in range(0,len(daquyu)):
-            href=daquyu.href[i]
-            xiaoquyu=get_quyu_list(url=href,quyudaxiao='xiao')
-            if i==0:
-                df=xiaoquyu
-            else:
-                df=pd.concat([df,xiaoquyu],ignore_index=True)
-        QuyuLianjie=df['href']
-        Quyu=df['pinyin']
-        df.rename(columns={'href':'ershoufanglianjie', 'pinyin':'xiaoquyu'}, inplace = True)
-        df.to_csv('链家二手房小区域列表.csv')
-    return(Quyu,QuyuLianjie)
-
-
 
 
 #链家只能显示100页的数据，每页30个，不分区域最多只能爬取3000个数据
 #房源数据有几万个，必须分区域爬取，且按浦东这种大区域也会超出3000个数据，所以必须分小区域
 
-#设置列表页URL的固定部分
-url='http://hz.lianjia.com/ershoufang/'
-#设置页面页的可变部分
-page=('pg')
+#设置参数
+city=input("请输入城市拼音首字母（如：上海'sh'北京'bj'深圳'sz'广州'gz'杭州'hz'）：")
+url_base='https://'+city+'.lianjia.com/ershoufang/'
+save_folder_path='../LianJiaSaveData/save_html_data/'
 
 #设置请求头部信息,我们最好在http请求中设置一个头部信息，否则很容易被封ip。
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
@@ -245,28 +250,33 @@ headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML,
 #encoding=requests.get(url,headers=headers).encoding
 
 #获取小区域列表
-(Quyu,QuyuLianjie)=get_xiaoquyu_lianjie(url)
+(quyu_list,quyu_link_list)=get_small_quyu_link(city,headers)
 
 datestr=datetime.datetime.now().strftime('%Y%m%d')
 
 #爬数据，并保存在子文件夹save_html_data中，每个日期一个文件夹，同一天的数据放在以日期命名的子文件夹中
-for i in range(0,len(QuyuLianjie)):
-    url=QuyuLianjie[i]
-    quyu=Quyu[i]
-    totalPage=get_page_num(url)
-    print(str(i)+'/'+str(len(QuyuLianjie))+','+quyu+',共'+str(totalPage)+'页')
-    if totalPage==0:
-        html=''
+for i in range(0,len(quyu_link_list)):
+    url=quyu_link_list[i]
+    quyu=quyu_list[i]
+    filename=save_folder_path+datestr+'_'+city+'/html_'+quyu+'.txt'
+    if os.path.exists(filename):
+        print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',文件已存在，跳过')
+        pass
     else:
-        html=get_html(url,totalPage)
-    save_html(html,datestr,quyu=quyu)
+        totalPage=get_page_num(url,headers)
+        print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',共'+str(totalPage)+'页')
+        if totalPage==0:
+            html=''
+        else:
+            html=get_html(url,totalPage,headers)
+        save_html(html,datestr,city,quyu,save_folder_path)
 
 
 #解析数据，并保存在子文件夹save_house_data中
-for i in range(0,len(QuyuLianjie)):
-    print(str(i+1)+'/'+str(len(QuyuLianjie)))
-    quyu=Quyu[i]
-    filename='../LianJiaSaveData/save_html_data/'+datestr+'/html_'+quyu+'.txt'
+for i in range(0,len(quyu_link_list)):
+    print(str(i+1)+'/'+str(len(quyu_link_list)))
+    quyu=quyu_list[i]
+    filename=save_folder_path+datestr+'_'+city+'/html_'+quyu+'.txt'
     fh = open(filename, 'r', encoding='utf-8')
     html=fh.read()
     fh.close()
@@ -279,6 +289,6 @@ for i in range(0,len(QuyuLianjie)):
             all_house_split=pd.concat([all_house_split,house_split])
 
 all_house_split1 = all_house_split[~all_house_split['id'].duplicated()]
-filename='../LianJiaSaveData/save_house_data/house_'+datestr+'.csv'
+filename='../LianJiaSaveData/save_house_data/house_'+city+'_'+datestr+'.csv'
 all_house_split1.to_csv(filename)
 
