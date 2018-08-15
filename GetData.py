@@ -15,11 +15,10 @@ import datetime
 
 #爬取区域的链接：文字text，链接href，拼音pinyin
 def get_quyu_list(url,region_big_small,headers):
-    if region_big_small=='small':
-        i=2
-        url
-    elif region_big_small=='big':
+    if region_big_small=='big':
         i=1
+    elif region_big_small=='small':
+        i=2
     else:
         print("Please input 'big' or 'small'.")
     r=requests.get(url,headers)
@@ -30,7 +29,11 @@ def get_quyu_list(url,region_big_small,headers):
     quyu=pd.DataFrame({'text':text,'href':href})
     href_split=pd.DataFrame(x.split('/') for x in quyu.href)
     quyu['pinyin']=href_split[2]
-    quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
+    if i==1:
+        quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
+    if i==2:
+        url=url[:-(len(url.split('/')[-2])+1)] #作用是删掉'大区域/'，因为小区域的链接是ershoufang/小区域，而不是ershoufang/大区域/小区域
+        quyu.href=pd.DataFrame(url+x+'/' for x in quyu.pinyin)
     return quyu
 
 
@@ -124,6 +127,7 @@ def save_html(html,datestr,city,quyu,save_folder_path='../LianJiaSaveData/save_h
 
 
 #提取需要的信息
+#北京的数据格式不同，不适用
 def parse_html(html):
     #使用lxml库的xpath方法对页面进行解析
     link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
