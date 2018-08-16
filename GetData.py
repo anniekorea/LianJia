@@ -91,7 +91,11 @@ def get_page_num(url,headers):
 def get_html(url,totalPage,headers):
     #totalPage=get_page_num(url)
     for i in range(1,totalPage+1):
-        print(i)
+        if i<totalPage:
+            print(i,end=',')
+        else:
+            print(i)
+        
         if i == 1:
             i=str(i)
             a=(url+'pg'+i+'/')
@@ -104,7 +108,7 @@ def get_html(url,totalPage,headers):
             html2=r.content
             html = html + html2
         #每次间隔x秒
-        time_interval = random.uniform(1,3) 
+        time_interval = random.uniform(1,2) 
         time.sleep(time_interval)  
     return html
 
@@ -293,6 +297,15 @@ for i in range(0,len(quyu_link_list)):
             all_house_split=pd.concat([all_house_split,house_split])
 
 all_house_split1 = all_house_split[~all_house_split['id'].duplicated()]
+
+#变量数量化
+house=all_house_split1
+house['mianji']=house['mianji'].str[1:-3].astype(float)
+house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
+#增加“每平米房价”字段
+house['totalprice']=house['totalprice'].astype('float64')
+house['price']=house['totalprice']/house['mianji']
+
 filename='../LianJiaSaveData/save_house_data/house_'+city+'_'+datestr+'.csv'
 all_house_split1.to_csv(filename)
 
