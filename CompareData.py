@@ -29,24 +29,24 @@ def compare_two_date(filename_earlier,filename_later):
 
     a2='，两个文件共同的房源%d套'%len(diff_tp)
     
-    diff_mean_price=np.mean(house2['totalprice']/house2['area'])-np.mean(house1['totalprice'])
-    if diff_mean_tp>0:
-        a9='%s的总价平均值为%.2f万元，%s的总价平均值为%.2f万元，上涨%.2f万元'%\
-            (filename_earlier,np.mean(house1['totalprice']),
-            filename_later,np.mean(house2['totalprice']),diff_mean_tp)
-    elif diff_mean_tp<0:
-        a9='%s的总价平均值为%.2f万元，%s的总价平均值为%.2f万元，下跌%.2f万元'%\
-            (filename_earlier,np.mean(house1['totalprice']),
-            filename_later,np.mean(house2['totalprice']),diff_mean_tp)
+    diff_mean_price=np.mean(house2['price'])-np.mean(house1['price'])
+    if diff_mean_price>0.01:
+        a9='%s的单价平均值为%.2f万元，%s的单价平均值为%.2f万元，上涨%.2f万元'%\
+            (filename_earlier,np.mean(house1['price']),
+            filename_later,np.mean(house2['price']),diff_mean_price)
+    elif diff_mean_price<-0.01:
+        a9='%s的单价平均值为%.2f万元，%s的单价平均值为%.2f万元，下跌%.2f万元'%\
+            (filename_earlier,np.mean(house1['price']),
+            filename_later,np.mean(house2['price']),diff_mean_price)
     else:
-        a9='%s的总价平均值为%.2f万元，%s的总价平均值为%.2f万元，保持不变'%\
-            (filename_earlier,np.mean(house1['totalprice']),
-            filename_later,np.mean(house2['totalprice']))
+        a9='%s的单价平均值为%.2f万元，%s的单价平均值为%.2f万元，基本保持不变'%\
+            (filename_earlier,np.mean(house1['price']),
+            filename_later,np.mean(house2['price']))
     
-    a3='其中%d套房源价格上调，占比%.4f%%，平均上涨%.2f万元，平均涨幅%.2f%%'%
+    a3='其中%d套房源价格上调，占比%.4f%%，平均上涨%.2f万元，平均涨幅%.2f%%'%\
         (sum(diff_tp>0),sum(diff_tp>0)/len(house_merge),
          np.mean(diff_tp[diff_tp>0]),np.mean(diffpct_tp[diffpct_tp>0])*100)
-    a4='其中%d套房源价格下调，占比%.4f%%，平均下跌%.2f万元，平均跌幅%.2f%%'%
+    a4='其中%d套房源价格下调，占比%.4f%%，平均下跌%.2f万元，平均跌幅%.2f%%'%\
         (sum(diff_tp<0),sum(diff_tp<0)/len(house_merge),
          np.mean(diff_tp[diff_tp<0]),np.mean(diffpct_tp[diffpct_tp<0])*100)
     

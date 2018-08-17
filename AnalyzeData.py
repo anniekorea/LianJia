@@ -38,10 +38,10 @@ fh = open(filename, 'a', encoding='utf-8',newline='')
 house=pd.read_csv('../LianJiaSaveData/save_house_data/'+datafilename+'.csv',sep=',',index_col=0)
 
 #本文变量数量化
-house['mianji']=house['mianji'].str[1:-3].astype(float)
-house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
+#house['mianji']=house['mianji'].str[1:-3].astype(float)
+#house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
 #增加“每平米房价”字段
-house['price']=house['totalprice']/house['mianji']
+#house['price']=house['totalprice']/house['mianji']
 
 #汇总信息
 fh.write('============================分析日期：%s，共%d套房源============================\r\n'%(datestr,len(house)))
@@ -95,9 +95,9 @@ result=house.sort_values('guanzhu',ascending=False).head(10)
 save_analyze_result(fh,result_txt,result)
 
 #平均值
-fh.write('上海市二手房平均面积为：%.2f平方米'%house['mianji'].mean()+'\r\n')
-fh.write('上海市二手房平均总价为：%.2f万元'%house['totalprice'].mean()+'\r\n')
-fh.write('上海市二手房平均价格为：%.2f万元每平米'%house['price'].mean()+'\r\n')
+fh.write('二手房平均面积为：%.2f平方米'%house['mianji'].mean()+'\r\n')
+fh.write('二手房平均总价为：%.2f万元'%house['totalprice'].mean()+'\r\n')
+fh.write('二手房平均单价为：%.2f万元每平米'%house['price'].mean()+'\r\n')
 
 #按照面积分组
 #作图
@@ -197,5 +197,5 @@ fig.savefig('../LianJiaSaveData/save_analyze_result/单价分布_%s_%s.jpg'%(cit
 
 fh.close()
 
-filename='../LianJiaSaveData/save_analyze_result/house_%s_%s(utf_8_sig).csv'%(city,datestr)
-house.to_csv(filename,encoding = "utf_8_sig")
+#filename='../LianJiaSaveData/save_analyze_result/house_%s_%s(utf_8_sig).csv'%(city,datestr)
+#house.to_csv(filename,encoding = "utf_8_sig")

@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Fri Aug 17 16:02:32 2018
+
+@author: Administrator
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Jul 11 19:55:21 2018
 
 @author: Annie
@@ -107,7 +114,7 @@ def get_html(url,totalPage,headers):
             r=requests.get(a,headers)
             html2=r.content
             html = html + html2
-        #每次间隔x秒
+        #为了避免被反爬，设置间隔时间，经测试，设成1-2秒比较合适，再短可能就会中断
         time_interval = random.uniform(1,2) 
         time.sleep(time_interval)  
     return html
@@ -128,115 +135,6 @@ def save_html(html,datestr,city,quyu,save_folder_path='../LianJiaSaveData/save_h
     fh = open(filename, 'w', encoding='utf-8')
     fh.write(html_str)
     fh.close()
-
-
-#提取需要的信息
-#北京的数据格式不同，不适用
-def parse_html(html):
-    #使用lxml库的xpath方法对页面进行解析
-    link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
-        
-    #1、提取房源总价
-    price=link.xpath('//div[@class="priceInfo"]')  
-    tp=[]
-    for a in price:
-        totalPrice=a.xpath('.//span/text()')[0]
-        tp.append(totalPrice)   
-    #抽取打印前10条房源总价信息：
-    #for p in tp[:10]:
-    #    print(p)
-        
-    #2、提取房源信息
-    houseInfo=link.xpath('//div[@class="houseInfo"]')   
-    hi=[]
-    for b in houseInfo:
-        house=b.xpath('.//text()')[0]+b.xpath('.//text()')[1]
-        hi.append(house)    
-    #抽取打印前10条房屋信息：
-    #for i in hi[:10]:
-    #    print(i)
-        
-    #3、提取房源关注度
-    followInfo=link.xpath('//div[@class="followInfo"]')    
-    fi=[]
-    for c in followInfo:
-        follow=c.xpath('./text()')[0]
-        fi.append(follow)   
-    #抽取打印前10条房屋信息：
-    #for i in fi[:10]:
-    #    print(i)    
-    
-    #4、提取房源位置信息
-    positionInfo=link.xpath('//div[@class="positionInfo"]')
-    pi=[]
-    for d in positionInfo:
-        position=d.xpath('.//text()')[0]+d.xpath('.//text()')[1]
-        pi.append(position)
-        
-    #5、提取房源ID和名称信息
-    #housecode=link.xpath('//div[@class="info clear"]/div[@class="title"]/a/@data-housecode')
-    housecode=link.xpath('//div[@class="priceInfo"]/div[@class="unitPrice"]/@data-hid')
-    housename=link.xpath('//div[@class="info clear"]/div[@class="title"]/a/text()')
-    
-    #import pandas as pd
-    #创建数据表
-    house=pd.DataFrame({'id':housecode,'totalprice':tp,'houseinfo':hi,'followinfo':fi,'positioninfo':pi,
-                        'housename':housename}) #,index=np.array(housecode)
-    #查看数据表的内容
-    #house.head()
-    #house.to_csv("house_notsplit.csv")
-    
-    return house
-
-
-#信息分列
-def split_data(house):
-    #house=pd.DataFrame({'totalprice':tp,'houseinfo':hi,'followinfo':fi,'positioninfo':pi,
-    #                    'housename':housename},index=housecode)
-    #1、对房源信息进行分列
-    #一般是6列，但独栋别墅是7列，多出第二列“独栋别墅”
-    houseinfo_replace=house.houseinfo
-    for x in range(len(houseinfo_replace)):
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 独栋', '独栋')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 联排', '联排')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 双拼', '双拼')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 叠拼', '叠拼')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 暂无数据别墅', '')
-    
-    try:    
-        houseinfo_split = pd.DataFrame((x.split('|') for x in houseinfo_replace),
-                                   columns=['xiaoqu','huxing','mianji',
-                                            'chaoxiang','zhuangxiu','dianti']) #index=house.index,
-    #houseinfo_split.head()
-    except:
-        houseinfo_split = pd.DataFrame((x.split('|') for x in houseinfo_replace),
-                                   columns=['xiaoqu','huxing','mianji',
-                                            'chaoxiang','zhuangxiu']) #index=house.index,
-        houseinfo_split['dianti']=None
-    finally:    
-        #2、对房源关注度进行分列
-        followinfo_split = pd.DataFrame((x.split('/') for x in house.followinfo),
-                                        columns=['guanzhu','daikan','fabu'])  #,index=house.index
-        
-    
-        
-        #3、对房源位置信息进行分列
-        positioninfo_split=pd.DataFrame((x.split('-') for x in house.positioninfo),
-                                        columns=['louceng','quyu']) #index=house.index,
-        positioninfo_split['louceng']=positioninfo_split['louceng'].map(str.strip)
-        positioninfo_split['quyu']=positioninfo_split['quyu'].map(str.strip)
-        
-        #将分列后的关注度信息拼接回原数据表
-        house_split=pd.concat([house,houseinfo_split,followinfo_split,positioninfo_split],axis=1)
-        #house.head()
-        
-        #然后再删除原先的列
-        house_split=house_split.drop(['houseinfo','followinfo','positioninfo'],axis=1)
-        print("共采集"+str(len(house))+"条房源信息")
-        #house.head()
-  
-        return house_split
-
 
 
 #链家只能显示100页的数据，每页30个，不分区域最多只能爬取3000个数据
@@ -278,34 +176,4 @@ for i in range(0,len(quyu_link_list)):
         else:
             html=get_html(url,totalPage,headers)
         save_html(html,datestr,city,quyu,save_folder_path)
-
-
-#解析数据，并保存在子文件夹save_house_data中
-for i in range(0,len(quyu_link_list)):
-    print(str(i+1)+'/'+str(len(quyu_link_list)))
-    quyu=quyu_list[i]
-    filename=save_folder_path+datestr+'_'+city+'/html_'+quyu+'.txt'
-    fh = open(filename, 'r', encoding='utf-8')
-    html=fh.read()
-    fh.close()
-    if len(html)>0:
-        house=parse_html(html)
-        house_split=split_data(house)
-        if i==0:
-            all_house_split=house_split
-        if i>=1:
-            all_house_split=pd.concat([all_house_split,house_split])
-
-all_house_split1 = all_house_split[~all_house_split['id'].duplicated()]
-
-#变量数量化
-house=all_house_split1
-house['mianji']=house['mianji'].str[1:-3].astype(float)
-house['guanzhu']=house['guanzhu'].str[:-4].astype(int)
-#增加“每平米房价”字段
-house['totalprice']=house['totalprice'].astype('float64')
-house['price']=house['totalprice']/house['mianji']
-
-filename='../LianJiaSaveData/save_house_data/house_'+city+'_'+datestr+'.csv'
-all_house_split1.to_csv(filename)
 
