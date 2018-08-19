@@ -11,7 +11,8 @@ import pandas as pd
 
 
 #提取需要的信息
-#北京的数据格式不同，不适用
+#北京的数据格式不同，单独处理
+
 def parse_html(html):
     #使用lxml库的xpath方法对页面进行解析
     link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
@@ -24,29 +25,34 @@ def parse_html(html):
         tp.append(float(totalPrice))
 
     #2、提取房源信息
+    #20180815:北京的houseInfo格式与其他不同，单独处理
+    #上海的格式为'共富二村 | 2室2厅 | 81.01平米 | 南 | 精装 | 无电梯'(整体)
+    #北京的格式为‘流星花园三区 /4室2厅/118.32平米/南 西 北/精装/有电梯’（5-6部分）
     houseInfo=link.xpath('//div[@class="houseInfo"]')   
     hi=[]
-    if len(houseInfo[0].xpath('.//text()'))==2:
-        for b in houseInfo:
-            house=b.xpath('.//text()')[0]+b.xpath('.//text()')[1]
-            hi.append(house)
-    elif len(houseInfo[0].xpath('.//text()'))==3: #特别处理惠州的房源的houseInfo
-        for b in houseInfo:
-            house=b.xpath('.//text()')[1]+b.xpath('.//text()')[2]
-            hi.append(house)        
-        
+    for b in houseInfo:
+        h=b.xpath('.//text()')
+        house=h[0]
+        for j in list(range(2,len(h),2)):
+            house=house+'|'+h[j]
+        hi.append(house)         
+       
     #3、提取房源关注度
     followInfo=link.xpath('//div[@class="followInfo"]')    
     fi=[]
     for c in followInfo:
-        follow=c.xpath('./text()')[0]
-        fi.append(follow)      
-    
+        follow=c.xpath('./text()')[0]+'/'+c.xpath('./text()')[1]
+        fi.append(follow)   
+      
     #4、提取房源位置信息
     positionInfo=link.xpath('//div[@class="positionInfo"]')
     pi=[]
     for d in positionInfo:
-        position=d.xpath('.//text()')[0]+d.xpath('.//text()')[1]
+        if len(d.xpath('.//text()'))==5:
+            position=d.xpath('.//text()')[0]+'/'+d.xpath('.//text()')[2]+'/'+d.xpath('.//text()')[4]
+        elif len(d.xpath('.//text()'))==4:
+            position=''+'/'+d.xpath('.//text()')[1]+'/'+d.xpath('.//text()')[3]
+                    
         pi.append(position)
         
     #5、提取房源ID和名称信息
@@ -72,13 +78,12 @@ def split_data(house):
     #一般是6列，但独栋别墅是7列，多出第二列“独栋别墅”
     houseinfo_replace=house.houseinfo.copy()
     for x in range(len(houseinfo_replace)):
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 独栋', '独栋') #别墅会多出一列，单独处理
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 联排', '联排')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 双拼', '双拼')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 叠拼', '叠拼')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('| 暂无数据别墅', '')
-        houseinfo_replace[x]=houseinfo_replace[x].replace('|玖誉', '玖誉') #深圳有个小区的名字为“鸿荣源·壹方中心|玖誉”，会偏移一列，单独处理
-    
+        houseinfo_replace[x]=houseinfo_replace[x].replace('|独栋', '独栋') #别墅会多出一列，单独处理
+        houseinfo_replace[x]=houseinfo_replace[x].replace('|联排', '联排')
+        houseinfo_replace[x]=houseinfo_replace[x].replace('|双拼', '双拼')
+        houseinfo_replace[x]=houseinfo_replace[x].replace('|叠拼', '叠拼')
+        houseinfo_replace[x]=houseinfo_replace[x].replace('|暂无数据别墅', '')
+  
     try:    
         houseinfo_split = pd.DataFrame((x.split('|') for x in houseinfo_replace),
                                    columns=['xiaoqu','huxing','mianji',
@@ -91,12 +96,14 @@ def split_data(house):
     
     #2、对房源关注度进行分列
     followinfo_split = pd.DataFrame((x.split('/') for x in house.followinfo),
-                                    columns=['guanzhu','daikan','fabu'])  
+                                    columns=['guanzhu','daikan'])  
     
     
     #3、对房源位置信息进行分列
-    positioninfo_split=pd.DataFrame((x.split('-') for x in house.positioninfo),
-                                    columns=['louceng','quyu']) 
+    positioninfo_split=pd.DataFrame((x.split('/') for x in house.positioninfo),
+                                    columns=['louceng','nianfen','quyu']) 
+    positioninfo_split['louceng']=positioninfo_split['louceng']+positioninfo_split['nianfen']
+    del positioninfo_split['nianfen']
     
     #将分列后的关注度信息拼接回原数据表
     house_split=pd.concat([house,houseinfo_split,followinfo_split,positioninfo_split],axis=1)

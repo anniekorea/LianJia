@@ -6,7 +6,6 @@ Created on Wed Jul 11 20:16:43 2018
 """
 
 import pandas as pd
-#import numpy as np
 import matplotlib.pyplot as plt
 #import matplotlib
 import csv
@@ -24,8 +23,7 @@ def save_analyze_result(fh,result_txt,result):
     fh.write('\r\n')
     #fh.close()
 
-#%matplotlib inline
-    
+#%matplotlib qt4
 plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
 
 city=input('请输入需要分析的城市（拼音简写）:')
@@ -33,7 +31,7 @@ datestr=input('请输入需要分析的日期：')
 datafilename='house_%s_%s'%(city,datestr)
 
 filename='../LianJiaSaveData/save_analyze_result/AnalyzeResult_%s_%s.txt'%(city,datestr)
-fh = open(filename, 'a', encoding='utf-8',newline='')
+fh = open(filename, 'w', encoding='utf-8',newline='')
 
 house=pd.read_csv('../LianJiaSaveData/save_house_data/'+datafilename+'.csv',sep=',',index_col=0)
 
@@ -44,8 +42,15 @@ house=pd.read_csv('../LianJiaSaveData/save_house_data/'+datafilename+'.csv',sep=
 #house['price']=house['totalprice']/house['mianji']
 
 #汇总信息
-fh.write('============================分析日期：%s，共%d套房源============================\r\n'%(datestr,len(house)))
-         
+fh.write('============================分析日期：%s，分析城市：%s============================\r\n\r\n'%(datestr,city))
+
+#总值
+fh.write('%s共有%d套房源\r\n'%(city,len(house)))
+#平均值
+fh.write('二手房平均面积为：%.2f平方米\r\n'%house['mianji'].mean())
+fh.write('二手房平均总价为：%.2f万元\r\n'%house['totalprice'].mean())
+fh.write('二手房平均单价为：%.2f万元每平米\r\n\r\n'%house['price'].mean())
+       
 #房价最高的10套二手房
 result_txt='房价最高的10套二手房:\r\n'
 result=house.sort_values('totalprice',ascending=False).head(10)
@@ -93,11 +98,6 @@ save_analyze_result(fh,result_txt,result)
 result_txt='关注人数最多的10套二手房:\r\n'
 result=house.sort_values('guanzhu',ascending=False).head(10)
 save_analyze_result(fh,result_txt,result)
-
-#平均值
-fh.write('二手房平均面积为：%.2f平方米'%house['mianji'].mean()+'\r\n')
-fh.write('二手房平均总价为：%.2f万元'%house['totalprice'].mean()+'\r\n')
-fh.write('二手房平均单价为：%.2f万元每平米'%house['price'].mean()+'\r\n')
 
 #按照面积分组
 #作图
@@ -194,6 +194,10 @@ plt.ylabel('房源数')
 plt.xlabel('单价（万）')
 fig.savefig('../LianJiaSaveData/save_analyze_result/单价分布_%s_%s.jpg'%(city,datestr))
 
+print('%s共有%d套房源'%(city,len(house)))
+print('二手房平均面积为：%.2f平方米'%house['mianji'].mean())
+print('二手房平均总价为：%.2f万元'%house['totalprice'].mean())
+print('二手房平均单价为：%.2f万元每平米'%house['price'].mean())
 
 fh.close()
 

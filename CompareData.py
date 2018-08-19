@@ -5,11 +5,15 @@ Created on Thu Aug 16 13:20:43 2018
 @author: Administrator
 """
 
-import pandas as pd
-import numpy as np
-def compare_two_date(filename_earlier,filename_later):
+#对比同一个城市，不同时期的房源数据
+def compare_two_date(date_earlier,date_later,city):
+    import pandas as pd
+    import numpy as np
 #    filename_earlier='house_sh_20180809'
 #    filename_later='house_sh_20180816'
+    filename_earlier='house_%s_%s'%(date_earlier,city)
+    filename_later='house_%s_%s'%(date_later,city)
+    
     house1=pd.read_csv('../LianJiaSaveData/save_house_data/%s.csv'%(filename_earlier),sep=',',index_col=0)
     house2=pd.read_csv('../LianJiaSaveData/save_house_data/%s.csv'%(filename_later),sep=',',index_col=0)
     house_merge=house1.merge(house2,on='id',how='inner')
@@ -83,3 +87,40 @@ def compare_two_date(filename_earlier,filename_later):
     print(a6)
     print(a7)
     print(a8)
+
+#对比不同城市的房源数据
+def compare_many_files(filename_list):
+#    filename_list=['house_bj_20180815','house_sz_20180818','house_sh_20180809',
+#                   'house_gz_20180819','house_hz_20180814','house_nj_20180817',
+#                   'house_wh_20180819','house_cd_20180819','house_hui_20180819',
+#                   'house_cs_20180819','house_xa_20180819']
+    import pandas as pd    
+    for i in range(0,len(filename_list)):
+        house=pd.read_csv('../LianJiaSaveData/save_house_data/%s.csv'%(filename_list[i]),sep=',',index_col=0)
+        df1=pd.DataFrame({'filename':[filename_list[i]],'housenum':[len(house)]})
+        df2=pd.DataFrame({'totalprice_median':[house['totalprice'].median()],
+                        'totalprice_mean':[house['totalprice'].mean()],
+                        'totalprice_min':[house['totalprice'].min()],
+                        'totalprice_max':[house['totalprice'].max()]})
+        df3=pd.DataFrame({'price_median':[house['price'].median()],
+                        'price_mean':[house['price'].mean()],
+                        'price_min':[house['price'].min()],
+                        'price_max':[house['price'].max()]})
+        df4=pd.DataFrame({'mianji_median':[house['mianji'].median()],
+                        'mianji_mean':[house['mianji'].mean()],
+                        'mianji_min':[house['mianji'].min()],
+                        'mianji_max':[house['mianji'].max()]})
+        df=pd.concat([df1,df2,df3,df4],axis=1)
+        if i==0:
+            result=df
+        else:
+            result=result.append(df)
+        #指定顺序
+        result=result.loc[:,['filename','housenum',
+                             'totalprice_median','totalprice_mean','totalprice_min','totalprice_max',
+                             'price_median','price_mean','price_min','price_max',
+                             'mianji_median','mianji_mean','mianji_min','mianji_max']]
+    return result
+
+
+

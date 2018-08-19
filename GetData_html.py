@@ -76,9 +76,9 @@ def get_small_quyu_link(city,headers):
     return(quyu_list,quyu_link_list)
 
 #获取页码，用于构造分页的链接
-def get_page_num(url,headers):
+def get_page_num(url,headers,proxies={'https':''}):
     import json
-    r=requests.get(url,headers)
+    r=requests.get(url,headers=headers,proxies=proxies,timeout=10)
     html=r.content
     link=etree.HTML(html,parser=etree.HTMLParser(encoding='utf-8'))
     page=link.xpath('//div[@class="contentBottom clear"] \
@@ -95,7 +95,7 @@ def get_page_num(url,headers):
         return totalPage
 
 #循环抓取列表页信息
-def get_html(url,totalPage,headers):
+def get_html(url,totalPage,headers,proxies={'https':''}):
     #totalPage=get_page_num(url)
     for i in range(1,totalPage+1):
         if i<totalPage:
@@ -106,16 +106,16 @@ def get_html(url,totalPage,headers):
         if i == 1:
             i=str(i)
             a=(url+'pg'+i+'/')
-            r=requests.get(a,headers)
+            r=requests.get(a,headers=headers,proxies=proxies,timeout=10)
             html=r.content
         else:
             i=str(i)
             a=(url+'pg'+i+'/')
-            r=requests.get(a,headers)
+            r=requests.get(a,headers=headers,proxies=proxies,timeout=10)
             html2=r.content
             html = html + html2
         #为了避免被反爬，设置间隔时间，经测试，设成1-2秒比较合适，再短可能就会中断
-        time_interval = random.uniform(1,2) 
+        time_interval = random.uniform(1,4) 
         time.sleep(time_interval)  
     return html
 
@@ -139,41 +139,45 @@ def save_html(html,datestr,city,quyu,save_folder_path='../LianJiaSaveData/save_h
 
 #链家只能显示100页的数据，每页30个，不分区域最多只能爬取3000个数据
 #房源数据有几万个，必须分区域爬取，且按浦东这种大区域也会超出3000个数据，所以必须分小区域
-
-#设置参数
-city=input("请输入城市拼音首字母（如：上海'sh'北京'bj'深圳'sz'广州'gz'杭州'hz'）：")
-url_base='https://'+city+'.lianjia.com/ershoufang/'
-save_folder_path='../LianJiaSaveData/save_html_data/'
-
-#设置请求头部信息,我们最好在http请求中设置一个头部信息，否则很容易被封ip。
-headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-'Accept':'text/html;q=0.9,*/*;q=0.8',
-'Accept-Charset':'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-'Accept-Encoding':'gzip',
-'Connection':'close',
-'Referer':'http://www.baidu.com/link?url=_andhfsjjjKRgEWkj7i9cFmYYGsisrnm2A-TN3XZDQXxvGsM9k9ZZSnikW2Yds4s&amp;amp;wd=&amp;amp;eqid=c3435a7d00146bd600000003582bfd1f'
-}
-#encoding=requests.get(url,headers=headers).encoding
-
-#获取小区域列表
-(quyu_list,quyu_link_list)=get_small_quyu_link(city,headers)
-
-datestr=datetime.datetime.now().strftime('%Y%m%d')
-
-#爬数据，并保存在子文件夹save_html_data中，每个日期一个文件夹，同一天的数据放在以日期命名的子文件夹中
-for i in range(0,len(quyu_link_list)):
-    url=quyu_link_list[i]
-    quyu=quyu_list[i]
-    filename=save_folder_path+datestr+'_'+city+'/html_'+quyu+'.txt'
-    if os.path.exists(filename):
-        print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',文件已存在，跳过')
-        pass
-    else:
-        totalPage=get_page_num(url,headers)
-        print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',共'+str(totalPage)+'页')
-        if totalPage==0:
-            html=''
+if __name__ == '__main__':
+    #设置参数
+    city=input("请输入城市拼音首字母（如：上海'sh'北京'bj'深圳'sz'广州'gz'杭州'hz'）：")
+    url_base='https://'+city+'.lianjia.com/ershoufang/'
+    save_folder_path='../LianJiaSaveData/save_html_data/'
+    
+    #设置请求头部信息,我们最好在http请求中设置一个头部信息，否则很容易被封ip。
+    #headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+    #'Accept':'text/html;q=0.9,*/*;q=0.8',
+    #'Accept-Charset':'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+    #'Accept-Encoding':'gzip',
+    #'Connection':'close',
+    #'Referer':'http://www.baidu.com/link?url=_andhfsjjjKRgEWkj7i9cFmYYGsisrnm2A-TN3XZDQXxvGsM9k9ZZSnikW2Yds4s&amp;amp;wd=&amp;amp;eqid=c3435a7d00146bd600000003582bfd1f'
+    #}
+    headers={'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+       'Accept-Language': 'zh-CN,zh;q=0.9',
+       'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36'}
+    #encoding=requests.get(url,headers=headers).encoding
+    
+    #获取小区域列表
+    (quyu_list,quyu_link_list)=get_small_quyu_link(city,headers)
+    
+    datestr=datetime.datetime.now().strftime('%Y%m%d')
+    
+    proxies={'https':''}
+    #爬数据，并保存在子文件夹save_html_data中，每个日期一个文件夹，同一天的数据放在以日期命名的子文件夹中
+    for i in range(0,len(quyu_link_list)):
+        url=quyu_link_list[i]
+        quyu=quyu_list[i]
+        filename=save_folder_path+datestr+'_'+city+'/html_'+quyu+'.txt'
+        if os.path.exists(filename):
+            print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',文件已存在，跳过')
+            pass
         else:
-            html=get_html(url,totalPage,headers)
-        save_html(html,datestr,city,quyu,save_folder_path)
+            totalPage=get_page_num(url,headers=headers,proxies=proxies)
+            print(str(i)+'/'+str(len(quyu_link_list))+','+quyu+',共'+str(totalPage)+'页')
+            if totalPage==0:
+                html=''
+            else:
+                html=get_html(url,totalPage,headers=headers,proxies=proxies)
+            save_html(html,datestr,city,quyu,save_folder_path)
 
