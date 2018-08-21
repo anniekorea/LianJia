@@ -45,11 +45,11 @@ def get_quyu_list(url,region_big_small,headers):
 
 
 #获取小区域的链接
-def get_small_quyu_link(city,headers):
-    url='https://'+city+'.lianjia.com/ershoufang/'
+def get_small_quyu_link(city,headers,url_last='ershoufang',savefolder='linklist_ershoufang'):
+    url='https://'+city+'.lianjia.com/'+url_last+'/'
     try:
         #小区域数据来源一：直接从文件读取小区域的链接
-        df=pd.read_csv('链家二手房小区域列表'+city+'.csv',engine='python')
+        df=pd.read_csv('./%s/链家二手房小区域列表%s.csv'%(savefolder,city),engine='python')
         quyu_link_list=df['ershoufanglianjie']
         quyu_list=df['xiaoquyu']
         print('查询到“链家二手房小区域列表.csv”，直接导入...')
@@ -72,7 +72,7 @@ def get_small_quyu_link(city,headers):
         quyu_link_list=df['href']
         quyu_list=df['pinyin']
         df.rename(columns={'href':'ershoufanglianjie', 'pinyin':'xiaoquyu'}, inplace = True)
-        df.to_csv('链家二手房小区域列表'+city+'.csv')
+        df.to_csv('./%s/链家二手房小区域列表%s.csv'%(savefolder,city))
     return(quyu_list,quyu_link_list)
 
 #获取页码，用于构造分页的链接
